@@ -194,6 +194,11 @@ impl sudo::Trait for Runtime {
 	type Proposal = Call;
 }
 
+impl example::Trait<example::Instance1> for Runtime {
+	type Amount = ();
+	type Event = Event;
+}
+
 impl grandpa::Trait for Runtime {
 	type SessionKey = SessionKey;
 	type Log = Log;
@@ -202,6 +207,7 @@ impl grandpa::Trait for Runtime {
 
 // TODO TODO: solve it by adding the path
 use balances::Instance1 as BalanceInstance1;
+use example::Instance1 as ExampleInstance1;
 
 construct_runtime!(
 	pub enum Runtime with Log(InternalLog: DigestItem<Hash, SessionKey>) where
@@ -227,7 +233,8 @@ construct_runtime!(
 		Contract: contract::{Module, Call, Storage, Config<T>, Event<T>},
 		Sudo: sudo,
 		Fees: fees::{Module, Storage, Config<T>, Event<T>},
-		BalancesInstance1: balances::{Module<T, BalanceInstance1>, Call<T, BalanceInstance1>, Config<T, BalanceInstance1>, Event<T, BalanceInstance1>},
+		BalancesInstance1: balances::{Event<T, BalanceInstance1>},
+		Example: example::{Module<T, ExampleInstance1>, Call<T, ExampleInstance1>, Storage<T, ExampleInstance1>, Event<T, ExampleInstance1>, Config<T, ExampleInstance1>},
 	}
 );
 

@@ -1961,6 +1961,7 @@ dependencies = [
  "srml-contract 0.1.0",
  "srml-council 0.1.0",
  "srml-democracy 0.1.0",
+ "srml-example 0.1.0",
  "srml-executive 0.1.0",
  "srml-fees 0.1.0",
  "srml-grandpa 0.1.0",
