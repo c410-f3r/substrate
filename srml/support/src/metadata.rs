@@ -62,7 +62,7 @@ macro_rules! __runtime_modules_to_metadata {
 				prefix: $crate::__runtime_modules_to_metadata_calls_storagename!($mod, $module, $runtime, $(with $kw $(<$kw_instance>)?)*),
 				storage: $crate::__runtime_modules_to_metadata_calls_storage!($mod, $module, $runtime, $(with $kw $(<$kw_instance>)?)*),
 				calls: $crate::__runtime_modules_to_metadata_calls_call!($mod, $module, $runtime, $(with $kw $(<$kw_instance>)?)*),
-				event: $crate::__runtime_modules_to_metadata_calls_event!($mod, $module, $runtime, $(with $kw)*), // TODO TODO: hmmm to think TODO TODO: do __module_events_example rightly implemented
+				event: $crate::__runtime_modules_to_metadata_calls_event!($mod, $module, $runtime, $(with $kw $(<$kw_instance>)?)*),
 			};
 			$( $rest )*
 		)
@@ -127,13 +127,13 @@ macro_rules! __runtime_modules_to_metadata_calls_event {
 		$mod: ident,
 		$module: ident,
 		$runtime: ident,
-		with Event
-		$(with $kws:ident)*
+		with Event $(<$instance:ident>)?
+		$(with $kws:ident $(<$kw_instance:ident>)?)*
 	) => {
 		Some($crate::metadata::DecodeDifferent::Encode(
 			$crate::metadata::FnEncode(
 				$crate::paste::expr!{
-					$runtime:: [< __module_events_ $mod >]
+					$runtime:: [< __module_events_ $mod $(Event $instance)?>]
 				}
 			)
 		))
@@ -142,10 +142,10 @@ macro_rules! __runtime_modules_to_metadata_calls_event {
 		$mod: ident,
 		$module: ident,
 		$runtime: ident,
-		with $_:ident
-		$(with $kws:ident)*
+		with $_:ident $(<$_instance:ident>)?
+		$(with $kws:ident $(<$kw_instance:ident>)?)*
 	) => {
-		$crate::__runtime_modules_to_metadata_calls_event!( $mod, $module, $runtime, $(with $kws)* );
+		$crate::__runtime_modules_to_metadata_calls_event!( $mod, $module, $runtime, $(with $kws $(<$kw_instance>)?)* );
 	};
 	(
 		$mod: ident,

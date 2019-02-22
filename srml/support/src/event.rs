@@ -242,8 +242,6 @@ macro_rules! __decl_generic_event {
 		{ $( $events:tt )* };
 		{ ,$( $generic_param:ident = $generic_type:ty ),* };
 	) => {
-		// TODO TODO: is raw event in balance the right one ? or does it always send raw event of
-		// default instance: to test it maybe use not default one to try
 		pub type Event<$event_generic_param $(, $instance $( = $event_default_instance)? )?> = RawEvent<$( $generic_type ),* $(, $instance)? >;
 		// Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
 		#[derive(Clone, PartialEq, Eq, $crate::parity_codec_derive::Encode, $crate::parity_codec_derive::Decode)]
