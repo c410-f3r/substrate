@@ -11,8 +11,8 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use rstd::prelude::*;
 use primitives::{OpaqueMetadata, crypto::key_types};
 use sr_primitives::{
-	ApplyResult, transaction_validity::TransactionValidity, generic, create_runtime_str,
-	impl_opaque_keys, AnySignature
+	transaction_validity::TransactionValidity,
+	generic, create_runtime_str, impl_opaque_keys, AnySignature, ApplyResult
 };
 use sr_primitives::traits::{NumberFor, BlakeTwo256, Block as BlockT, DigestFor, StaticLookup, Verify, ConvertInto};
 use sr_primitives::weights::Weight;
@@ -26,6 +26,7 @@ use client::{
 use version::RuntimeVersion;
 #[cfg(feature = "std")]
 use version::NativeVersion;
+use log::info;
 
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
@@ -346,6 +347,9 @@ impl_runtime_apis! {
 
 	impl client_api::TaggedTransactionQueue<Block> for Runtime {
 		fn validate_transaction(tx: <Block as BlockT>::Extrinsic) -> TransactionValidity {
+			info!("********************************** Before adding: {:?}", <template::Module<Runtime>>::state());
+			<template::Call<Runtime>>::add_bytes(vec![1, 2, 3, 4]);
+			info!("********************************** After adding: {:?}", <template::Module<Runtime>>::state());
 			Executive::validate_transaction(tx)
 		}
 	}
