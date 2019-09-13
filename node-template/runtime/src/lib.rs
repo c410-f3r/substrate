@@ -11,11 +11,11 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use rstd::prelude::*;
 use primitives::{OpaqueMetadata, crypto::key_types};
 use sr_primitives::{
-	ApplyResult, transaction_validity::TransactionValidity, generic, create_runtime_str,
-	impl_opaque_keys, AnySignature
+	ApplyResult, transaction_validity::{TransactionValidity, ValidTransaction, TransactionValidityError},
+	generic, create_runtime_str, impl_opaque_keys, AnySignature
 };
-use sr_primitives::traits::{NumberFor, BlakeTwo256, Block as BlockT, DigestFor, StaticLookup, Verify, ConvertInto};
-use sr_primitives::weights::Weight;
+use sr_primitives::traits::{NumberFor, BlakeTwo256, Block as BlockT, DigestFor, StaticLookup, Verify, ConvertInto, SignedExtension};
+use sr_primitives::weights::{DispatchInfo, Weight};
 use babe::{AuthorityId as BabeId};
 use grandpa::{AuthorityId as GrandpaId, AuthorityWeight as GrandpaWeight};
 use grandpa::fg_primitives::{self, ScheduledChange};
@@ -26,6 +26,7 @@ use client::{
 use version::RuntimeVersion;
 #[cfg(feature = "std")]
 use version::NativeVersion;
+use codec::{Decode, Encode};
 
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
@@ -253,7 +254,6 @@ impl sudo::Trait for Runtime {
 
 /// Used for the module template in `./template.rs`
 impl template::Trait for Runtime {
-	type Event = Event;
 }
 
 construct_runtime!(
@@ -270,7 +270,7 @@ construct_runtime!(
 		Balances: balances::{default, Error},
 		Sudo: sudo,
 		// Used for the module template in `./template.rs`
-		TemplateModule: template::{Module, Call, Storage, Event<T>},
+		TemplateModule: template::{Module, Call, Storage},
 	}
 );
 
@@ -291,7 +291,8 @@ pub type SignedExtra = (
 	system::CheckEra<Runtime>,
 	system::CheckNonce<Runtime>,
 	system::CheckWeight<Runtime>,
-	balances::TakeFees<Runtime>
+	balances::TakeFees<Runtime>,
+	OddEvenInherent<Runtime>
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
@@ -375,11 +376,6 @@ impl_runtime_apis! {
 
 	impl babe_primitives::BabeApi<Block> for Runtime {
 		fn startup_data() -> babe_primitives::BabeConfiguration {
-			// The choice of `c` parameter (where `1 - c` represents the
-			// probability of a slot being empty), is done in accordance to the
-			// slot duration and expected target block time, for safely
-			// resisting network delays of maximum two seconds.
-			// <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>
 			babe_primitives::BabeConfiguration {
 				median_required_blocks: 1000,
 				slot_duration: Babe::slot_duration(),
@@ -405,4 +401,86 @@ impl_runtime_apis! {
 			opaque::SessionKeys::generate(seed)
 		}
 	}
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq)]
+pub struct OddEvenInherent<T: system::Trait + Send + Sync>(rstd::marker::PhantomData<T>);
+
+#[cfg(feature = "std")]
+impl<T: system::Trait + Send + Sync> rstd::fmt::Debug for OddEvenInherent<T> {
+	fn fmt(&self, f: &mut rstd::fmt::Formatter) -> rstd::fmt::Result {
+		self.0.fmt(f)
+	}
+}
+
+impl<T: system::Trait + Send + Sync> OddEvenInherent<T> {
+	pub fn new() -> Self {
+		Self(rstd::marker::PhantomData)
+	}
+}
+
+impl<T: system::Trait + Send + Sync> SignedExtension for OddEvenInherent<T> {
+	type AccountId = T::AccountId;
+	type Call = <T as system::Trait>::Call;
+	type AdditionalSigned = ();
+	type Pre = ();
+
+	fn additional_signed(&self) -> Result<Self::AdditionalSigned, TransactionValidityError> {
+		Ok(())
+	}
+
+	fn validate(
+		&self,
+		who: &Self::AccountId,
+		_call: &Self::Call,
+		_info: DispatchInfo,
+		_len: usize,
+	) -> TransactionValidity {
+		let curr_number = System::block_number();
+		let address_bytes = who.encode();
+		let address_hash = hash(&address_bytes);
+		let is_curr_number_even = curr_number % 2 == 0;
+		let is_curr_tx_address_hash_even = address_hash % 2 == 0;
+		let mut tx = ValidTransaction::default();
+		match [is_curr_number_even, is_curr_tx_address_hash_even] {
+			[false, true] | [true, false] => {
+				// For an odd block number and even address hash or for an even block number and an odd
+				// address hash, requires an extrinsic that contains the next block number
+				tx.requires.push(number_to_bytes(curr_number + 1));
+			},
+			_ => {}
+		}
+		Ok(tx)
+	}
+
+	// We rely upon the timestamp extrinsic to provide tags of the current block number
+	fn validate_unsigned(
+		_call: &Self::Call,
+		_info: DispatchInfo,
+		_len: usize,
+	) -> TransactionValidity {
+		let curr_number = System::block_number();
+		let mut tx = ValidTransaction::default();
+		// All txs must depend upon this extrinsic that provides the current block number
+		// as tags
+		tx.provides.push(number_to_bytes(curr_number));
+		Ok(tx)
+	}
+}
+
+fn number_to_bytes(number: u32) -> Vec<u8> {
+	number
+		.to_be_bytes()
+		.into_iter()
+		.copied()
+		.collect()
+}
+
+/// Simple hash function
+fn hash(bytes: &[u8]) -> u64 {
+	let mut hash: u64 = 7;
+	for byte in bytes {
+		hash = hash.wrapping_mul(31).wrapping_add(*byte as u64);
+	}
+	hash
 }
