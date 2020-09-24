@@ -423,16 +423,20 @@ impl<D: NativeExecutionDispatch> sp_core::traits::CallInWasm for NativeExecutor<
 ///
 #[macro_export]
 macro_rules! native_executor_instance {
-	( $pub:vis $name:ident, $dispatcher:path, $version:path $(,)?) => {
+	( $(#[$attrs:meta])? $pub:vis $name:ident, $dispatcher:path, $version:path $(,)?) => {
 		/// A unit struct which implements `NativeExecutionDispatch` feeding in the
 		/// hard-coded runtime.
+		$(#[$attrs])?
 		$pub struct $name;
+		$(#[$attrs])?
 		$crate::native_executor_instance!(IMPL $name, $dispatcher, $version, ());
 	};
-	( $pub:vis $name:ident, $dispatcher:path, $version:path, $custom_host_functions:ty $(,)?) => {
+	( $(#[$attrs:meta])? $pub:vis $name:ident, $dispatcher:path, $version:path, $custom_host_functions:ty $(,)?) => {
 		/// A unit struct which implements `NativeExecutionDispatch` feeding in the
 		/// hard-coded runtime.
+		$(#[$attrs])?
 		$pub struct $name;
+		$(#[$attrs])?
 		$crate::native_executor_instance!(
 			IMPL $name, $dispatcher, $version, $custom_host_functions
 		);

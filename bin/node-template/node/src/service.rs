@@ -16,6 +16,7 @@ native_executor_instance!(
 	pub Executor,
 	node_template_runtime::api::dispatch,
 	node_template_runtime::native_version,
+	#[cfg(feature = "runtime-benchmarks")]
 	frame_benchmarking::benchmarking::HostFunctions,
 );
 
